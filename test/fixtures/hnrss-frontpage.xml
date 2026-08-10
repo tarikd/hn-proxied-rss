@@ -1,0 +1,11 @@
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Hacker News: Front Page</title><link>https://news.ycombinator.com/</link><description>Hacker News RSS</description><docs>https://hnrss.org/</docs><generator>hnrss v2.1.1</generator><lastBuildDate>Mon, 10 Aug 2026 11:39:30 +0000</lastBuildDate><atom:link href="https://hnrss.org/frontpage" rel="self" type="application/rss+xml"></atom:link><item><title><![CDATA[Meta Muse Glimmer – open weights 30B local coding model]]></title><description><![CDATA[
+<p>Article URL: <a href="https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model">https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49241679">https://news.ycombinator.com/item?id=49241679</a></p>
+<p>Points: 141</p>
+<p># Comments: 52</p>
+]]></description><pubDate>Mon, 10 Aug 2026 10:10:02 +0000</pubDate><link>https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model</link><dc:creator>riordan</dc:creator><comments>https://news.ycombinator.com/item?id=49241679</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49241679</guid></item><item><title><![CDATA[Docker Sandboxes – Disposable, isolated sandboxes for AI agents]]></title><description><![CDATA[
+<p>Article URL: <a href="https://www.docker.com/products/docker-sandboxes/">https://www.docker.com/products/docker-sandboxes/</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49239751">https://news.ycombinator.com/item?id=49239751</a></p>
+<p>Points: 273</p>
+<p># Comments: 155</p>
+]]></description><pubDate>Mon, 10 Aug 2026 06:02:38 +0000</pubDate><link>https://www.docker.com/products/docker-sandboxes/</link><dc:creator>etoxin</dc:creator><comments>https://news.ycombinator.com/item?id=49239751</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49239751</guid></item></channel></rss>
