@@ -29,8 +29,7 @@ describe('worker fetch', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8');
     expect(response.headers.get('cache-control')).toBe('public, max-age=300');
-    expect(body).toContain('https://hackerweb.app/#/item/49241679');
-    expect(body).not.toContain('news.ycombinator.com/item?id=');
+    expect(body).toContain('<comments>https://worker.dev/hw/#/item/49241679</comments>');
   });
 
   it('forwards the path and query string to hnrss', async () => {
@@ -63,7 +62,7 @@ describe('worker fetch', () => {
     // production. Force that shape: first match() (fresh) misses, the
     // fallback match() finds the retained copy.
     const cache = caches.default;
-    const stale = new Response(rewriteFeed(fixture), {
+    const stale = new Response(rewriteFeed(fixture, 'https://worker.dev'), {
       headers: { 'content-type': 'application/rss+xml; charset=utf-8' },
     });
     let firstLookup = true;
@@ -81,7 +80,7 @@ describe('worker fetch', () => {
     const response = await call('/frontpage');
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('https://hackerweb.app/#/item/49241679');
+    expect(await response.text()).toContain('https://worker.dev/hw/#/item/49241679');
 
     vi.mocked(cache.match).mockRestore();
   });

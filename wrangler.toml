@@ -4,3 +4,9 @@ compatibility_date = "2026-08-01"
 
 [observability]
 enabled = true
+
+# The vendored HackerWeb frontend (scripts/vendor-hackerweb.mjs). Requests that
+# match a file are served from here without running the Worker; everything else,
+# feeds and /hw/api/*, falls through to it.
+[assets]
+directory = "./public"

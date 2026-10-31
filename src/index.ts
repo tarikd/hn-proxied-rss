@@ -1,13 +1,17 @@
 /**
- * Proxies hnrss.org feeds and points every Hacker News comment link at
- * HackerWeb, which has a dark theme. Everything else in the feed is passed
- * through byte-for-byte.
+ * Proxies hnrss.org feeds and points every Hacker News comment link at a
+ * self-hosted copy of HackerWeb (dark theme) under /hw/. Everything else in the
+ * feed is passed through byte-for-byte.
  */
+
+import { API_PREFIX, handleApi } from './hnapi';
 
 const UPSTREAM_ORIGIN = 'https://hnrss.org';
 const CACHE_TTL_SECONDS = 300;
 const USER_AGENT = 'hn-proxied-rss (+https://github.com/tarikd/hn-proxied-rss)';
 const FEED_CONTENT_TYPE = 'application/rss+xml; charset=utf-8';
+/** Where the vendored HackerWeb frontend is served from (public/hw/). */
+const HACKERWEB_PATH = '/hw/';
 
 /**
  * Matches HN item permalinks wherever they appear: element text, href
@@ -17,41 +21,36 @@ const FEED_CONTENT_TYPE = 'application/rss+xml; charset=utf-8';
  * string arrives XML-escaped inside the document. Trailing punctuation is left
  * alone by requiring the id to be digits.
  */
-const HN_ITEM_URL = /https?:\/\/news\.ycombinator\.com\/item\?id=(\d+)/g;
+const HN_ITEM_URL = /https?:\/\/news\.ycombinator\.com\/item\?id=(\d+)/;
 
-/** Turns an HN item id into its HackerWeb equivalent. */
-export function hackerWebUrl(id: string): string {
-  return `https://hackerweb.app/#/item/${id}`;
+/**
+ * A whole `<guid>` element. Tried before HN_ITEM_URL at each position so a
+ * guid is consumed, and kept, as one unit.
+ */
+const GUID_ELEMENT = /<guid\b[^>]*>[\s\S]*?<\/guid>/;
+
+const FEED_REWRITE = new RegExp(`(${GUID_ELEMENT.source})|${HN_ITEM_URL.source}`, 'g');
+
+/** Turns an HN item id into its URL on the HackerWeb copy served at `origin`. */
+export function hackerWebUrl(origin: string, id: string): string {
+  return `${origin}${HACKERWEB_PATH}#/item/${id}`;
 }
 
 /**
- * Rewrites every HN comment link in a feed document.
+ * Rewrites every HN comment link in a feed document to the HackerWeb copy
+ * served at `origin`.
  *
  * Deliberately a plain string replace rather than an XML parse: the transform
  * is a pure URL swap that never changes the document structure, so preserving
  * the upstream bytes exactly is both safer and cheaper than a reserialize.
  *
- * `<guid isPermaLink="false">` stays consistent for free — hnrss already emits
- * `false`, and the value remains false once the URL points at HackerWeb, so
- * there is no attribute to fix up. A `isPermaLink="true"` guid would need to
- * flip to `false`, which `normalizeGuidPermaLinks` handles.
+ * `<guid>` is left as hnrss sent it. It is an identifier, not a link: feed
+ * readers use it to tell items apart, so it must not change when the
+ * frontend's host does, or every item shows up again as new.
  */
-export function rewriteFeed(xml: string): string {
-  return normalizeGuidPermaLinks(xml.replace(HN_ITEM_URL, (_match, id: string) => hackerWebUrl(id)));
-}
-
-/**
- * A guid is only a permalink if the URL resolves to the item itself. Once a
- * rewritten HackerWeb URL is in there the claim no longer holds for feed
- * readers that try to fetch it, so any `isPermaLink="true"` guid carrying a
- * rewritten URL is downgraded to `false`.
- *
- * hnrss emits `false` today; this keeps the output correct if that changes.
- */
-function normalizeGuidPermaLinks(xml: string): string {
-  return xml.replace(
-    /<guid\s+isPermaLink="true"(\s*)>(\s*https:\/\/hackerweb\.app\/)/g,
-    '<guid isPermaLink="false"$1>$2',
+export function rewriteFeed(xml: string, origin: string): string {
+  return xml.replace(FEED_REWRITE, (match, guid: string | undefined, id: string) =>
+    guid === undefined ? hackerWebUrl(origin, id) : match,
   );
 }
 
@@ -96,15 +95,19 @@ export default {
       return errorResponse(405, 'Method not allowed');
     }
 
+    const url = new URL(request.url);
+    if (url.pathname.startsWith(API_PREFIX)) return withRequestMethod(await handleApi(request, ctx), request);
+
     const upstreamUrl = upstreamUrlFor(request.url);
     if (!upstreamUrl) {
       return errorResponse(404, 'Not found: expected an hnrss feed path, e.g. /frontpage or /newest');
     }
 
     const cache = caches.default;
-    // Key the cache on the upstream URL so /frontpage and /?  and differing
-    // query strings each get their own entry, independent of the worker host.
-    const cacheKey = new Request(upstreamUrl.toString(), { method: 'GET' });
+    // Key the cache on the upstream path and query, so / and /frontpage share
+    // an entry and each query string gets its own, under the worker's origin
+    // because the rewritten links point there.
+    const cacheKey = new Request(`${url.origin}${upstreamUrl.pathname}${upstreamUrl.search}`, { method: 'GET' });
 
     const cached = await cache.match(cacheKey);
     if (cached) return withRequestMethod(cached, request);
@@ -126,7 +129,7 @@ export default {
       );
     }
 
-    const rewritten = rewriteFeed(await upstreamResponse.text());
+    const rewritten = rewriteFeed(await upstreamResponse.text(), url.origin);
     const response = new Response(rewritten, { headers: feedHeaders() });
 
     // Populate the edge cache without delaying the response.
